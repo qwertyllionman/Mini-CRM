@@ -2,7 +2,7 @@
 Configuration settings for Mini-CRM application.
 Uses Pydantic BaseSettings to load environment variables with robust defaults.
 """
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -19,9 +19,7 @@ class Settings(BaseSettings):
     # Supports SQLite by default for zero-setup, and PostgreSQL via DATABASE_URL env
     DATABASE_URL: str = "sqlite:///./crm.db"
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
