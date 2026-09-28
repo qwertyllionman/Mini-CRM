@@ -1,0 +1,25 @@
+services:
+  crm-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mini_crm_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./crm.db
+      - SECRET_KEY=mini-crm-production-secret-key-replace-in-env
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+    volumes:
+      - crm_storage:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  crm_storage:
+    driver: local
