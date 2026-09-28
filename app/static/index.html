@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-CRM — Lead Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Brand / Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xl font-bold bg-gradient-to-r from-slate-900 to-indigo-900 bg-clip-text text-transparent">Mini CRM</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">Pro</span>
+                        </div>
+                        <p class="text-xs text-slate-400 font-medium">Lead Management System</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+                    <button id="nav-leads-btn" onclick="switchTab('leads')" class="nav-tab px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 bg-white text-indigo-600 shadow-xs">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span>Leadlar</span>
+                    </button>
+                    <button id="nav-dashboard-btn" onclick="switchTab('dashboard')" class="nav-tab px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 text-slate-600 hover:text-slate-900">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>Dashboard</span>
+                    </button>
+                </nav>
+
+                <!-- Actions & Auth -->
+                <div class="flex items-center space-x-3">
+                    <a href="/docs" target="_blank" class="hidden sm:inline-flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition border border-slate-200">
+                        <i data-lucide="code-2" class="w-3.5 h-3.5"></i>
+                        <span>API Docs</span>
+                    </a>
+
+                    <button onclick="openCreateLeadModal()" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition shadow-indigo-200 hover:shadow-md hover:shadow-indigo-300">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Yangi Lead</span>
+                    </button>
+
+                    <!-- User Account / Auth Button -->
+                    <div id="auth-section">
+                        <!-- Rendered dynamically by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: LEADS MANAGEMENT VIEW               -->
+        <!-- ========================================== -->
+        <section id="tab-leads" class="space-y-6">
+            
+            <!-- Filters & Search Toolbar -->
+            <div class="soft-card p-5 space-y-4">
+                <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+                    <!-- Search Bar -->
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="Ism, email, telefon yoki eslatma bo'yicha qidirish..." 
+                            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                            oninput="handleSearchDebounce()"
+                        >
+                    </div>
+
+                    <!-- Source Filter & Sorting -->
+                    <div class="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                        <!-- Source Filter -->
+                        <div class="relative min-w-[150px]">
+                            <select 
+                                id="source-filter" 
+                                onchange="handleFilterChange()" 
+                                class="w-full appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                            >
+                                <option value="all">Barcha manbalar</option>
+                                <option value="Website">Website</option>
+                                <option value="Telegram">Telegram</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="Referral">Referral</option>
+                                <option value="Google Ads">Google Ads</option>
+                                <option value="Cold Call">Cold Call</option>
+                                <option value="Event">Event</option>
+                                <option value="Boshqa">Boshqa</option>
+                            </select>
+                            <i data-lucide="chevron-down" class="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        </div>
+
+                        <!-- Sort By -->
+                        <div class="relative min-w-[150px]">
+                            <select 
+                                id="sort-filter" 
+                                onchange="handleSortChange()" 
+                                class="w-full appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                            >
+                                <option value="created_at:desc">Eng yangi (Avval)</option>
+                                <option value="created_at:asc">Eng eski (Avval)</option>
+                                <option value="name:asc">Ism (A-Z)</option>
+                                <option value="name:desc">Ism (Z-A)</option>
+                                <option value="status:asc">Status bo'yicha</option>
+                            </select>
+                            <i data-lucide="arrow-up-down" class="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        </div>
+
+                        <!-- Reset / Refresh -->
+                        <button onclick="resetFilters()" title="Filtrlarni tozalash" class="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Filter Pills -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+                    <button onclick="setStatusFilter('all')" data-status="all" class="status-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5 bg-indigo-600 text-white border-indigo-600 shadow-xs">
+                        <span>Barchasi</span>
+                        <span id="badge-count-all" class="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                    <button onclick="setStatusFilter('New')" data-status="New" class="status-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5 bg-white text-slate-600 border-slate-200 hover:border-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                        <span>Yangi</span>
+                        <span id="badge-count-new" class="bg-slate-100 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                    <button onclick="setStatusFilter('Contacted')" data-status="Contacted" class="status-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5 bg-white text-slate-600 border-slate-200 hover:border-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span>Bog'lanilgan</span>
+                        <span id="badge-count-contacted" class="bg-slate-100 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                    <button onclick="setStatusFilter('Qualified')" data-status="Qualified" class="status-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5 bg-white text-slate-600 border-slate-200 hover:border-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                        <span>Saralangan</span>
+                        <span id="badge-count-qualified" class="bg-slate-100 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                    <button onclick="setStatusFilter('Won')" data-status="Won" class="status-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5 bg-white text-slate-600 border-slate-200 hover:border-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Yutib olingan</span>
+                        <span id="badge-count-won" class="bg-slate-100 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                    <button onclick="setStatusFilter('Lost')" data-status="Lost" class="status-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5 bg-white text-slate-600 border-slate-200 hover:border-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                        <span>Yo'qotilgan</span>
+                        <span id="badge-count-lost" class="bg-slate-100 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Leads Table Card -->
+            <div class="soft-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/75 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th class="py-3.5 px-6">Lead Ismi</th>
+                                <th class="py-3.5 px-6">Aloqa Ma'lumotlari</th>
+                                <th class="py-3.5 px-6">Manba</th>
+                                <th class="py-3.5 px-6">Status (Tezkor o'zgartirish)</th>
+                                <th class="py-3.5 px-6">Sana</th>
+                                <th class="py-3.5 px-6 text-right">Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leads-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="leads-empty-state" class="hidden py-16 px-4 text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="inbox" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">Hech qanday lead topilmadi</h3>
+                    <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Qidiruv yoki filtr parametrlarini o'zgartirib ko'ring yoki yangi lead qo'shing.</p>
+                    <button onclick="openCreateLeadModal()" class="mt-4 inline-flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Lead yaratish</span>
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="leads-loading-state" class="py-16 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
+                    <p class="text-sm text-slate-500 mt-2 font-medium">Ma'lumotlar yuklanmoqda...</p>
+                </div>
+
+                <!-- Pagination Footer -->
+                <div id="pagination-footer" class="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
+                    <div class="flex items-center space-x-2">
+                        <span>Sahifadagi qatorlar:</span>
+                        <select id="page-size-select" onchange="handlePageSizeChange()" class="border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span id="pagination-range-text">Ko'rsatilmoqda: 0 dan 0 ta</span>
+                    </div>
+
+                    <div class="flex items-center space-x-1" id="pagination-buttons">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: ANALYTICS DASHBOARD                 -->
+        <!-- ========================================== -->
+        <section id="tab-dashboard" class="space-y-8 hidden">
+            
+            <!-- KPI Cards Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <!-- Total -->
+                <div class="soft-card p-4">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold">Jami Leadlar</span>
+                        <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
+                    </div>
+                    <div class="mt-2 text-2xl font-bold text-slate-800" id="stat-total">0</div>
+                    <div class="mt-1 text-[11px] text-slate-400 font-medium">Barcha ro'yxatdagilar</div>
+                </div>
+
+                <!-- New -->
+                <div class="soft-card p-4">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold">Yangi</span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                    </div>
+                    <div class="mt-2 text-2xl font-bold text-sky-600" id="stat-new">0</div>
+                    <div class="mt-1 text-[11px] text-slate-400 font-medium">Ko'rib chiqilishi kerak</div>
+                </div>
+
+                <!-- Contacted -->
+                <div class="soft-card p-4">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold">Bog'lanilgan</span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    </div>
+                    <div class="mt-2 text-2xl font-bold text-amber-600" id="stat-contacted">0</div>
+                    <div class="mt-1 text-[11px] text-slate-400 font-medium">Muloqot boshlangan</div>
+                </div>
+
+                <!-- Qualified -->
+                <div class="soft-card p-4">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold">Saralangan</span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                    </div>
+                    <div class="mt-2 text-2xl font-bold text-purple-600" id="stat-qualified">0</div>
+                    <div class="mt-1 text-[11px] text-slate-400 font-medium">Talablarga mos</div>
+                </div>
+
+                <!-- Won & Conversion -->
+                <div class="soft-card p-4 border-l-4 border-l-emerald-500">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold">Yutib olingan</span>
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                    </div>
+                    <div class="mt-2 text-2xl font-bold text-emerald-600" id="stat-won">0</div>
+                    <div class="mt-1 text-[11px] text-emerald-700 font-semibold" id="stat-conversion">0% konversiya</div>
+                </div>
+
+                <!-- Lost -->
+                <div class="soft-card p-4 border-l-4 border-l-rose-500">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span class="text-xs font-semibold">Yo'qotilgan</span>
+                        <i data-lucide="x-circle" class="w-4 h-4 text-rose-500"></i>
+                    </div>
+                    <div class="mt-2 text-2xl font-bold text-rose-600" id="stat-lost">0</div>
+                    <div class="mt-1 text-[11px] text-slate-400 font-medium">Rad etilgan / to'xtatilgan</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Status Distribution Chart -->
+                <div class="soft-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">Statuslar bo'yicha taqsimot</h3>
+                            <p class="text-xs text-slate-400">Leadlarning funnel bo'yicha holati</p>
+                        </div>
+                        <i data-lucide="pie-chart" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <div class="relative h-64 flex items-center justify-center">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sources Breakdown Chart -->
+                <div class="soft-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">Lead Manbalari (Kanal tahlili)</h3>
+                            <p class="text-xs text-slate-400">Qaysi manbalardan eng ko'p mijoz kelmoqda</p>
+                        </div>
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <div class="relative h-64 flex items-center justify-center">
+                        <canvas id="sourceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Recent Activity Stream -->
+            <div class="soft-card p-6">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">So'nggi tizim faoliyati (Audit Trail)</h3>
+                        <p class="text-xs text-slate-400">Barcha leadlar bo'yicha oxirgi o'zgarishlar tarixi</p>
+                    </div>
+                    <span class="text-xs font-semibold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full">Real-time</span>
+                </div>
+                <div id="recent-activities-list" class="space-y-4">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAL: LEAD CREATE / EDIT                  -->
+    <!-- ========================================== -->
+    <div id="lead-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                    </div>
+                    <h3 id="lead-modal-title" class="text-base font-bold text-slate-800">Yangi Lead qo'shish</h3>
+                </div>
+                <button onclick="closeLeadModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="lead-form" onsubmit="handleLeadFormSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="lead-modal-id">
+
+                <!-- Lead Name -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Ism / Tashkilot nomi <span class="text-rose-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="lead-name" 
+                        required 
+                        placeholder="Masalan: Abdulaziz Axmadaliev yoki 'Apex Soft'" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    >
+                </div>
+
+                <!-- Contact Channels -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Telefon raqami
+                        </label>
+                        <input 
+                            type="text" 
+                            id="lead-phone" 
+                            placeholder="+998 90 123 45 67" 
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Email manzili
+                        </label>
+                        <input 
+                            type="email" 
+                            id="lead-email" 
+                            placeholder="lead@company.uz" 
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        >
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400">* Kamida bitta aloqa vositasi (telefon yoki email) kiritilishi shart.</p>
+
+                <!-- Source & Initial Status -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Manba (Source)
+                        </label>
+                        <select 
+                            id="lead-source" 
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        >
+                            <option value="Website">Website</option>
+                            <option value="Telegram">Telegram</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Referral">Referral (Tavsiya)</option>
+                            <option value="Google Ads">Google Ads</option>
+                            <option value="Cold Call">Cold Call</option>
+                            <option value="Event">Event</option>
+                            <option value="Boshqa">Boshqa</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Boshlang'ich Status
+                        </label>
+                        <select 
+                            id="lead-status" 
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        >
+                            <option value="New">New (Yangi)</option>
+                            <option value="Contacted">Contacted (Bog'lanilgan)</option>
+                            <option value="Qualified">Qualified (Saralangan)</option>
+                            <option value="Won">Won (Yutib olingan)</option>
+                            <option value="Lost">Lost (Yo'qotilgan)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Eslatma / Izoh (Notes)
+                    </label>
+                    <textarea 
+                        id="lead-note" 
+                        rows="3" 
+                        placeholder="Mijoz talablari, taklif qilingan xizmat yoki muzokaralar tafsilotlari..." 
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    ></textarea>
+                </div>
+
+                <!-- Footer buttons -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeLeadModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">
+                        Bekor qilish
+                    </button>
+                    <button type="submit" id="lead-form-submit-btn" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm shadow-indigo-200 transition">
+                        Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- DRAWER / MODAL: LEAD DETAIL & AUDIT LOG    -->
+    <!-- ========================================== -->
+    <div id="detail-drawer" class="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs hidden">
+        <div class="bg-white w-full max-w-xl h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <!-- Drawer Header -->
+            <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h3 id="drawer-lead-name" class="text-lg font-bold text-slate-900">Lead Tafsilotlari</h3>
+                        <span id="drawer-lead-status-badge"></span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">ID: #<span id="drawer-lead-id"></span> &bull; Yaratilgan: <span id="drawer-lead-created"></span></p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="editCurrentDrawerLead()" title="Tahrirlash" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg border border-slate-200 transition">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="closeDetailDrawer()" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Drawer Body -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Contact & Channel Info Box -->
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Aloqa ma'lumotlari</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                <i data-lucide="phone" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-medium">Telefon</div>
+                                <div id="drawer-lead-phone" class="text-sm font-semibold text-slate-800">-</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center">
+                                <i data-lucide="mail" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-medium">Email</div>
+                                <div id="drawer-lead-email" class="text-sm font-semibold text-slate-800">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                        <span class="text-slate-500">Kelib tushgan manba:</span>
+                        <span id="drawer-lead-source" class="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md"></span>
+                    </div>
+                </div>
+
+                <!-- Quick Status Change Bar -->
+                <div class="soft-card p-4 space-y-2">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider">Statusni o'zgartirish:</div>
+                    <div class="grid grid-cols-5 gap-1.5" id="drawer-status-buttons">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Notes Section -->
+                <div>
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Eslatma / Izoh:</div>
+                    <div id="drawer-lead-note" class="bg-white border border-slate-200 rounded-xl p-3.5 text-sm text-slate-700 whitespace-pre-wrap min-h-[60px]">
+                        Izoh mavjud emas.
+                    </div>
+                </div>
+
+                <!-- Activity / History Timeline (Bonus Requirement) -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-1.5">
+                            <i data-lucide="history" class="w-4 h-4 text-indigo-600"></i>
+                            <span>O'zgarishlar Tarixi (Activity / History)</span>
+                        </div>
+                        <span class="text-[11px] text-slate-400" id="drawer-activity-count">0 ta amal</span>
+                    </div>
+
+                    <div id="drawer-timeline-container" class="space-y-0">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawer Footer -->
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                <button onclick="deleteCurrentDrawerLead()" class="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center space-x-1.5 px-3 py-2 rounded-lg hover:bg-rose-50 transition">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span>Leadni o'chirish</span>
+                </button>
+                <button onclick="closeDetailDrawer()" class="text-xs font-semibold px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition">
+                    Yopish
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: AUTHENTICATION (LOGIN / REGISTER)   -->
+    <!-- ========================================== -->
+    <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-200 text-sm font-bold">
+                <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 py-3 text-center border-b-2 border-indigo-600 text-indigo-600">
+                    Kirish
+                </button>
+                <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 py-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-700">
+                    Ro'yxatdan o'tish
+                </button>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="p-6 space-y-4">
+                <div id="auth-fullname-group" class="hidden">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">To'liq ism</label>
+                    <input type="text" id="auth-fullname" placeholder="Abdulaziz Axmadaliev" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Email</label>
+                    <input type="email" id="auth-email" required placeholder="admin@minicrm.uz" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Parol (min 6 ta belgi)</label>
+                    <input type="password" id="auth-password" required minlength="6" placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <div id="auth-error-msg" class="text-xs text-rose-500 font-semibold hidden"></div>
+
+                <div class="pt-2 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeAuthModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100">Bekor qilish</button>
+                    <button type="submit" id="auth-submit-btn" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-200 transition">
+                        Kirish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Application JavaScript Logic -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
